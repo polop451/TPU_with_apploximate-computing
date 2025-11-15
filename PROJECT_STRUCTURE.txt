@@ -1,0 +1,234 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                    TPU PROJECT STRUCTURE                         ║
+║                  Organized and Ready to Use                      ║
+╚══════════════════════════════════════════════════════════════════╝
+
+TPUverilog/
+│
+├── 📄 README.md                    # Main project documentation
+│
+├── �� drivers/                     # Software Drivers
+│   ├── 📄 README.md                # Driver documentation
+│   ├── 🐍 tpu_driver.py    (12KB)  # Python driver
+│   ├── ⚡ tpu_driver.c     (14KB)  # C driver
+│   ├── 🚀 tpu_driver.cpp   (17KB)  # C++ driver
+│   ├── 🔧 Makefile         (2KB)   # Build automation
+│   ├── 🔧 build.sh         (6KB)   # Build script
+│   ├── 📄 requirements.txt (271B)  # Python deps
+│   ├── 💻 tpu_driver       (35KB)  # C executable (compiled)
+│   └── 💻 tpu_driver_cpp   (40KB)  # C++ executable (compiled)
+│
+├── 📁 hardware/                    # FPGA Hardware Design
+│   ├── 📄 README.md                # Hardware documentation
+│   │
+│   ├── 📁 verilog/                 # Verilog source files
+│   │   ├── 🔷 Core TPU
+│   │   │   ├── tpu_top_with_io.v              # Top-level with I/O
+│   │   │   ├── fp16_approx_systolic_array.v   # 8x8 array (64 MACs)
+│   │   │   ├── fp16_approx_mac_unit.v         # FP16 MAC unit
+│   │   │   ├── fp16_approximate_multiplier.v  # Approximate multiplier
+│   │   │   ├── memory_controller.v            # Memory management
+│   │   │   └── tpu_controller.v               # Control FSM
+│   │   │
+│   │   ├── 🔷 Neural Network
+│   │   │   └── activation_functions.v         # 7 activations
+│   │   │
+│   │   ├── 🔷 I/O Interfaces
+│   │   │   ├── uart_interface.v               # UART (115200 baud)
+│   │   │   └── io_interfaces.v                # SPI + Buttons
+│   │   │
+│   │   ├── 🔷 Legacy/Alternative
+│   │   │   ├── tpu_top.v                      # INT8 top-level
+│   │   │   ├── systolic_array.v               # 4x4 INT8 array
+│   │   │   ├── mac_unit.v                     # INT8 MAC
+│   │   │   └── tpu_simple.v                   # Simple TPU
+│   │   │
+│   │   └── 🔷 Testbenches
+│   │       ├── fp16_approx_tpu_testbench.v
+│   │       ├── tpu_testbench.v
+│   │       ├── tpu_simple_testbench.v
+│   │       └── activation_test.v
+│   │
+│   └── 📁 constraints/             # XDC constraint files
+│       ├── basys3_io_constraints.xdc   # Complete I/O pins
+│       └── basys3_constraints.xdc      # Original constraints
+│
+└── 📁 docs/                        # Documentation
+    ├── �� README.md                # Documentation index
+    │
+    ├── 📘 Driver Documentation
+    │   ├── DRIVERS_README.md       (18KB) # Complete overview
+    │   ├── DRIVER_GUIDE.md         (12KB) # Detailed guide
+    │   ├── DRIVER_SUMMARY.md       (8KB)  # Quick reference
+    │   └── DRIVER_FILES.txt        (12KB) # File summary
+    │
+    ├── 📗 Hardware Documentation
+    │   ├── IO_INTERFACE_GUIDE.md   (11KB) # I/O interfaces
+    │   ├── FP16_APPROXIMATE.md     (12KB) # Approximate computing
+    │   ├── ACTIVATION_FUNCTIONS.md (15KB) # NN activations
+    │   └── COMPARISON.md           (10KB) # INT8 vs FP16
+    │
+    └── 📙 Testing Documentation
+        └── TEST_RESULTS.md         (5KB)  # Test results
+
+╔══════════════════════════════════════════════════════════════════╗
+║                         FILE STATISTICS                          ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📊 Summary by Category:
+
+Drivers (3 languages):
+  - Python:     1 file   (12 KB)
+  - C:          1 file   (14 KB)  → 35 KB executable
+  - C++:        1 file   (17 KB)  → 40 KB executable
+  - Build:      2 files  (8 KB)
+  - Total:      7 files  (51 KB source + 75 KB binaries)
+
+Hardware (Verilog):
+  - Core TPU:   6 files  (~800 lines)
+  - I/O:        2 files  (~600 lines)
+  - Legacy:     4 files  (~500 lines)
+  - Testbench:  4 files  (~400 lines)
+  - Constraints: 2 files (XDC)
+  - Total:      18 files (~2,300 lines)
+
+Documentation:
+  - Markdown:   13 files (~110 KB)
+  - Text:       1 file   (12 KB)
+  - Total:      14 files (~122 KB)
+
+Overall Total:
+  - Source files:     28 files
+  - Documentation:    14 files
+  - Executables:      2 files (compiled)
+  - Total Size:       ~250 KB (source + docs)
+
+╔══════════════════════════════════════════════════════════════════╗
+║                      QUICK NAVIGATION                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+🎯 Want to...
+
+Build drivers?
+  → cd drivers && ./build.sh all
+
+Run Python driver?
+  → cd drivers && python3 tpu_driver.py
+
+Simulate hardware?
+  → cd hardware/verilog && iverilog -g2012 ...
+
+Read documentation?
+  → cd docs && cat README.md
+
+Synthesize for FPGA?
+  → Open Vivado, add hardware/verilog/*.v
+
+Learn about I/O?
+  → cat docs/IO_INTERFACE_GUIDE.md
+
+Understand approximate computing?
+  → cat docs/FP16_APPROXIMATE.md
+
+╔══════════════════════════════════════════════════════════════════╗
+║                    DIRECTORY PURPOSES                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📁 drivers/
+   PURPOSE: Software drivers for communicating with TPU
+   USERS:   Software developers, Python/C/C++ programmers
+   OUTPUTS: Executables that run on PC to control FPGA
+
+�� hardware/
+   PURPOSE: FPGA hardware design files
+   USERS:   Hardware engineers, FPGA developers
+   OUTPUTS: Bitstream files to program Basys3 FPGA
+   
+   📁 hardware/verilog/
+      PURPOSE: RTL source code
+      FORMAT:  Verilog/SystemVerilog
+      TOOLS:   Vivado, Icarus Verilog
+   
+   📁 hardware/constraints/
+      PURPOSE: Pin mappings and timing
+      FORMAT:  XDC (Xilinx Design Constraints)
+      TOOLS:   Vivado
+
+📁 docs/
+   PURPOSE: All project documentation
+   USERS:   Everyone (beginners to experts)
+   FORMAT:  Markdown (.md), Text (.txt)
+
+╔══════════════════════════════════════════════════════════════════╗
+║                       KEY FEATURES                               ║
+╚══════════════════════════════════════════════════════════════════╝
+
+✅ ORGANIZED STRUCTURE
+   - Separated drivers, hardware, and docs
+   - Each directory has README.md
+   - Clear file naming conventions
+
+✅ MULTIPLE LANGUAGES
+   - Python (easy, NumPy)
+   - C (fast, no deps)
+   - C++ (modern, safe)
+
+✅ COMPLETE HARDWARE
+   - INT8 and FP16 implementations
+   - 3 I/O interfaces (UART/SPI/Buttons)
+   - 7 activation functions
+   - Testbenches included
+
+✅ COMPREHENSIVE DOCS
+   - Getting started guides
+   - API references
+   - Troubleshooting
+   - Thai and English
+
+✅ BUILD AUTOMATION
+   - Makefile for C/C++
+   - Build script for all
+   - Requirements.txt for Python
+
+✅ TESTED AND WORKING
+   - All simulations pass
+   - Drivers compile successfully
+   - Ready for Basys3 deployment
+
+╔══════════════════════════════════════════════════════════════════╗
+║                      GETTING STARTED                             ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Step 1: Read the main README
+   $ cat README.md
+
+Step 2: Choose your path
+
+   🐍 SOFTWARE DEVELOPER PATH:
+      $ cd drivers
+      $ cat README.md
+      $ ./build.sh all
+      $ python3 tpu_driver.py
+
+   🔧 HARDWARE DEVELOPER PATH:
+      $ cd hardware
+      $ cat README.md
+      $ cd verilog
+      $ iverilog -g2012 -o sim *.v
+      $ vvp sim
+
+   📚 LEARN FIRST PATH:
+      $ cd docs
+      $ cat README.md
+      $ cat DRIVERS_README.md
+      $ cat FP16_APPROXIMATE.md
+
+Step 3: Connect Basys3 and test!
+
+╔══════════════════════════════════════════════════════════════════╗
+║  Project is organized and ready! Choose your path and start! 🚀  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Generated: November 15, 2025
+Project: TPU on Basys3 FPGA
+Version: 1.0 (Organized Structure)
