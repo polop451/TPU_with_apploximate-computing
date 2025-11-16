@@ -1,3 +1,10 @@
+// I/O Interfaces Collection
+// This file has been reorganized - modules separated into individual files:
+// - spi_interface.v
+// - button_switch_interface.v
+//
+// This file is kept for backward compatibility and includes both modules.
+
 // SPI Interface for TPU (faster than UART)
 // Mode 0: CPOL=0, CPHA=0
 // Support up to 25 MHz SPI clock

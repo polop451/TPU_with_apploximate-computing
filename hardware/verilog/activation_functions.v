@@ -1,6 +1,10 @@
-// Activation Functions Module
-// Support for multiple activation functions for neural networks
-// Compatible with both INT8 and FP16 TPU
+// Activation Functions - ReLU, Sigmoid, Tanh
+// Hardware implementations optimized for neural networks
+// Supports both integer and floating-point formats
+//
+// Note: Additional activation modules have been separated:
+// - activation_layer.v - Apply activation to all outputs
+// - sigmoid_lut.v - LUT-based sigmoid
 
 module activation_functions #(
     parameter DATA_WIDTH = 16,     // 8 for INT8, 16 for FP16
@@ -201,74 +205,6 @@ module activation_functions #(
             data_out <= (IS_FLOATING_POINT) ? FP16_ZERO : {DATA_WIDTH{1'b0}};
         else if (enable)
             data_out <= result;
-    end
-
-endmodule
-
-
-// Activation Layer - Apply activation to all outputs
-module activation_layer #(
-    parameter SIZE = 8,
-    parameter DATA_WIDTH = 16,
-    parameter IS_FLOATING_POINT = 1
-)(
-    input wire clk,
-    input wire rst_n,
-    input wire enable,
-    input wire [2:0] activation_type,
-    input wire [DATA_WIDTH-1:0] data_in [0:SIZE-1][0:SIZE-1],
-    output wire [DATA_WIDTH-1:0] data_out [0:SIZE-1][0:SIZE-1]
-);
-
-    genvar i, j;
-    generate
-        for (i = 0; i < SIZE; i = i + 1) begin : gen_row
-            for (j = 0; j < SIZE; j = j + 1) begin : gen_col
-                activation_functions #(
-                    .DATA_WIDTH(DATA_WIDTH),
-                    .IS_FLOATING_POINT(IS_FLOATING_POINT)
-                ) act_func (
-                    .clk(clk),
-                    .rst_n(rst_n),
-                    .enable(enable),
-                    .activation_type(activation_type),
-                    .data_in(data_in[i][j]),
-                    .data_out(data_out[i][j])
-                );
-            end
-        end
-    endgenerate
-
-endmodule
-
-
-// LUT-based Sigmoid (more accurate but uses memory)
-module sigmoid_lut #(
-    parameter DATA_WIDTH = 8,
-    parameter LUT_SIZE = 256
-)(
-    input wire [DATA_WIDTH-1:0] x_in,
-    output reg [DATA_WIDTH-1:0] sigmoid_out
-);
-
-    // Pre-computed sigmoid lookup table
-    // sigmoid(x) for x in range [-4, 4] mapped to [0, 255]
-    always @(*) begin
-        case (x_in)
-            8'd0:   sigmoid_out = 8'd128;  // sigmoid(0) = 0.5
-            8'd16:  sigmoid_out = 8'd138;  // sigmoid(0.5) ≈ 0.62
-            8'd32:  sigmoid_out = 8'd156;  // sigmoid(1.0) ≈ 0.73
-            8'd64:  sigmoid_out = 8'd193;  // sigmoid(2.0) ≈ 0.88
-            8'd96:  sigmoid_out = 8'd225;  // sigmoid(3.0) ≈ 0.95
-            8'd127: sigmoid_out = 8'd251;  // sigmoid(4.0) ≈ 0.98
-            // Negative values
-            8'd240: sigmoid_out = 8'd138;  // sigmoid(-0.5)
-            8'd224: sigmoid_out = 8'd100;  // sigmoid(-1.0)
-            8'd192: sigmoid_out = 8'd62;   // sigmoid(-2.0)
-            8'd160: sigmoid_out = 8'd30;   // sigmoid(-3.0)
-            8'd128: sigmoid_out = 8'd4;    // sigmoid(-4.0)
-            default: sigmoid_out = 8'd128; // Default to 0.5
-        endcase
     end
 
 endmodule
