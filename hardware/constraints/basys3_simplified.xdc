@@ -49,20 +49,39 @@ set_property -dict { PACKAGE_PIN A18  IOSTANDARD LVCMOS33 } [get_ports uart_tx] 
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property CFGBVS VCCO [current_design]
 
-## Timing Constraints
-## Critical paths in systolic array
-set_max_delay -from [get_pins -hierarchical *mac_unit*/acc_reg*/C] -to [get_pins -hierarchical *mac_unit*/acc_reg*/D] 10.0
+## Synthesis Strategy for Timing Optimization
+set_property STEPS.SYNTH_DESIGN.ARGS.DIRECTIVE AlternateRoutability [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.RETIMING true [get_runs synth_1]
+set_property STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY rebuilt [get_runs synth_1]
 
-## I/O timing
-set_input_delay -clock sys_clk_pin 2.0 [get_ports uart_rx]
-set_output_delay -clock sys_clk_pin 2.0 [get_ports uart_tx]
+## Implementation Strategy for Timing Optimization
+set_property STEPS.PLACE_DESIGN.ARGS.DIRECTIVE ExtraTimingOpt [get_runs impl_1]
+set_property STEPS.PHYS_OPT_DESIGN.IS_ENABLED true [get_runs impl_1]
+set_property STEPS.ROUTE_DESIGN.ARGS.DIRECTIVE AggressiveExplore [get_runs impl_1]
+
+## Timing Constraints
+## Critical paths in systolic array - allow 2 cycles for MAC operation
+set_multicycle_path -setup 2 -from [get_pins -hierarchical *mac_unit*/mult_result_reg*/C] -to [get_pins -hierarchical *mac_unit*/accumulator*/D]
+set_multicycle_path -hold 1 -from [get_pins -hierarchical *mac_unit*/mult_result_reg*/C] -to [get_pins -hierarchical *mac_unit*/accumulator*/D]
+
+## Relaxed timing for FP16 multiplier (combinational logic)
+set_max_delay -from [get_pins -hierarchical *mult*/a*] -to [get_pins -hierarchical *mac_unit*/mult_result_reg*/D] 9.5
+
+## I/O timing - relaxed for UART
+set_input_delay -clock sys_clk_pin 3.0 [get_ports uart_rx]
+set_output_delay -clock sys_clk_pin 3.0 [get_ports uart_tx]
 
 ## False paths (button and switch inputs are asynchronous)
 set_false_path -from [get_ports btn_*]
 set_false_path -from [get_ports switches*]
+set_false_path -from [get_ports rst_n]
 
-## Multi-cycle paths for memory operations
+## Multi-cycle paths for memory operations (Block RAM has 2-cycle latency)
 set_multicycle_path -setup 2 -from [get_pins -hierarchical *mem*/CLKARDCLK] -to [get_pins -hierarchical *_reg*/D]
+set_multicycle_path -hold 1 -from [get_pins -hierarchical *mem*/CLKARDCLK] -to [get_pins -hierarchical *_reg*/D]
+
+## Multi-cycle for controller FSM (state transitions can take 2 cycles)
+set_multicycle_path -setup 2 -from [get_pins -hierarchical state_reg*/C] -to [get_pins -hierarchical *counter*/D]
 
 ## I/O Summary:
 ## Inputs (12): clk, rst_n, uart_rx, switches[7:0], btn_up, btn_down

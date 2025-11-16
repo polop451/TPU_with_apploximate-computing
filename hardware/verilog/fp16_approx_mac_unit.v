@@ -24,8 +24,9 @@ module fp16_approx_mac_unit #(
     output reg [15:0] acc_out    // Accumulated result
 );
 
-    // Internal wires
+    // Internal wires and pipeline registers
     wire [15:0] mult_result;
+    reg [15:0] mult_result_reg;  // Pipeline stage 1
     wire [15:0] add_result;
     reg [15:0] accumulator;
     
@@ -38,30 +39,34 @@ module fp16_approx_mac_unit #(
         .result(mult_result)
     );
     
-    // Approximate FP16 Adder
+    // Approximate FP16 Adder (uses pipelined mult result)
     fp16_approximate_adder #(
         .APPROX_ALIGN(APPROX_ALIGN)
     ) adder (
         .a(accumulator),
-        .b(mult_result),
+        .b(mult_result_reg),
         .result(add_result)
     );
     
     // Pipeline and accumulation
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            mult_result_reg <= 16'h0000;  // Pipeline register
             accumulator <= 16'h0000;  // +0.0 in FP16
             a_out <= 16'h0000;
             w_out <= 16'h0000;
             acc_out <= 16'h0000;
         end else if (enable) begin
+            // Pipeline stage 1: Register multiplier output
+            mult_result_reg <= mult_result;
+            
             // Pass data to next PE
             a_out <= a_in;
             w_out <= w_in;
             
             // Accumulate
             if (acc_clear) begin
-                accumulator <= mult_result;
+                accumulator <= mult_result_reg;
             end else begin
                 accumulator <= add_result;
             end

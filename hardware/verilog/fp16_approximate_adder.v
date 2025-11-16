@@ -33,10 +33,19 @@ module fp16_approximate_adder #(
     
     // APPROXIMATE COMPUTING: Limit alignment shift to save shifter area
     wire [4:0] exp_diff = exp_large - exp_small;
-    wire [4:0] shift_amount = (exp_diff > APPROX_ALIGN) ? APPROX_ALIGN : exp_diff;
+    // Simplified: Clamp to max alignment immediately
+    wire [4:0] shift_amount = (exp_diff[4:2] != 3'b000) ? APPROX_ALIGN : exp_diff[1:0];
     
-    // Align mantissa (approximate)
-    wire [10:0] mant_small_aligned = mant_small_full >> shift_amount;
+    // Align mantissa (approximate) - simplified shifter
+    reg [10:0] mant_small_aligned;
+    always @(*) begin
+        case (shift_amount[1:0])
+            2'b00: mant_small_aligned = mant_small_full;
+            2'b01: mant_small_aligned = mant_small_full >> 1;
+            2'b10: mant_small_aligned = mant_small_full >> 2;
+            2'b11: mant_small_aligned = mant_small_full >> 3;
+        endcase
+    end
     
     // Add or subtract
     reg [11:0] mant_sum;
