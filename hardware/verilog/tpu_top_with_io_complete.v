@@ -11,45 +11,35 @@ module tpu_top_with_io_complete (
     input wire clk,              // 100 MHz system clock
     input wire rst_n,            // Active-low reset
     
-    // UART interface
+    // UART interface (primary interface)
     input wire uart_rx,
     output wire uart_tx,
     
-    // SPI interface
-    input wire spi_sclk,
-    input wire spi_mosi,
-    output wire spi_miso,
-    input wire spi_cs_n,
+    // Reduced Button interface (for demo/debug)
+    input wire [7:0] switches,   // Reduced from 16 to 8
+    input wire btn_up,           // Start button
+    input wire btn_down,         // Reset/Load button
     
-    // Button/Switch interface
-    input wire [15:0] switches,
-    input wire btn_center,
-    input wire btn_up,
-    input wire btn_left,
-    input wire btn_right,
-    input wire btn_down,
+    // Reduced LED outputs
+    output wire [15:0] leds      // Keep all 16 LEDs for status/debug
     
-    // LED and 7-segment outputs
-    output wire [15:0] leds,
-    output wire [6:0] seg,
-    output wire [3:0] an,
-    
-    // Status outputs
-    output wire tpu_busy_led,
-    output wire tpu_done_led
+    // Removed to save pins:
+    // - SPI interface (4 pins saved)
+    // - 7-segment display (11 pins saved: 7 segments + 4 anodes)
+    // - Extra buttons (3 pins saved)
+    // - Separate status LEDs (merged into leds[15:14])
 );
 
     // ========================================================================
     // Interface Mode Selection
     // ========================================================================
-    // switches[15:14] selects interface mode:
-    // 00 = Button/Switch mode
-    // 01 = UART mode  
-    // 10 = SPI mode
-    // 11 = Reserved
+    // Simplified: Only UART and Button modes
+    // switches[7] selects interface mode:
+    // 0 = Button/Switch mode (demo/debug)
+    // 1 = UART mode (primary interface)
     
-    wire [1:0] interface_mode = switches[15:14];
-    wire [2:0] activation_select = switches[13:11];  // Activation function select
+    wire interface_mode = switches[7];
+    wire [2:0] activation_select = switches[6:4];  // Activation function select
     
     // ========================================================================
     // TPU Core Signals
@@ -90,8 +80,6 @@ module tpu_top_with_io_complete (
     wire [1:0] btn_mem_sel;
     wire btn_tpu_start;
     wire [15:0] btn_leds;
-    wire [6:0] btn_seg;
-    wire [3:0] btn_an;
     
     // UART interface  
     wire [7:0] uart_mem_addr;
@@ -102,13 +90,6 @@ module tpu_top_with_io_complete (
     reg uart_mem_we;
     reg [1:0] uart_mem_sel;
     reg uart_tpu_start;
-    
-    // SPI interface
-    wire [7:0] spi_mem_addr;
-    wire [15:0] spi_mem_din;
-    wire spi_mem_we;
-    wire [1:0] spi_mem_sel;
-    wire spi_tpu_start;
     
     // ========================================================================
     // Memory Banks (Block RAM)
@@ -336,36 +317,17 @@ module tpu_top_with_io_complete (
     // Interface Modules
     // ========================================================================
     
-    // Multiplex based on interface mode
-    assign mem_addr = (interface_mode == 2'b00) ? btn_mem_addr :
-                      (interface_mode == 2'b01) ? uart_mem_addr :
-                      (interface_mode == 2'b10) ? spi_mem_addr : 8'h00;
+    // Multiplex based on interface mode (simplified: button=0, uart=1)
+    assign mem_addr = interface_mode ? uart_mem_addr : btn_mem_addr;
+    assign mem_data_in = interface_mode ? uart_mem_din : btn_mem_din;
+    assign mem_we = interface_mode ? uart_mem_we : btn_mem_we;
+    assign mem_select = interface_mode ? uart_mem_sel : btn_mem_sel;
+    assign tpu_start = interface_mode ? uart_tpu_start : btn_tpu_start;
     
-    assign mem_data_in = (interface_mode == 2'b00) ? btn_mem_din :
-                         (interface_mode == 2'b01) ? uart_mem_din :
-                         (interface_mode == 2'b10) ? spi_mem_din : 16'h0000;
-    
-    assign mem_we = (interface_mode == 2'b00) ? btn_mem_we :
-                    (interface_mode == 2'b01) ? uart_mem_we :
-                    (interface_mode == 2'b10) ? spi_mem_we : 1'b0;
-    
-    assign mem_select = (interface_mode == 2'b00) ? btn_mem_sel :
-                        (interface_mode == 2'b01) ? uart_mem_sel :
-                        (interface_mode == 2'b10) ? spi_mem_sel : 2'b00;
-    
-    assign tpu_start = (interface_mode == 2'b00) ? btn_tpu_start :
-                       (interface_mode == 2'b01) ? uart_tpu_start :
-                       (interface_mode == 2'b10) ? spi_tpu_start : 1'b0;
-    
-    // Output multiplexing
-    assign leds = (interface_mode == 2'b00) ? btn_leds :
-                  {switches[15:14], 2'b00, tpu_done, tpu_busy, activation_select, 7'b0};
-    
-    assign seg = (interface_mode == 2'b00) ? btn_seg : 7'b1111111;
-    assign an = (interface_mode == 2'b00) ? btn_an : 4'b1111;
-    
-    assign tpu_busy_led = tpu_busy;
-    assign tpu_done_led = tpu_done;
+    // LED output - merge status into main LED array
+    assign leds = interface_mode ? 
+                  {tpu_done, tpu_busy, 2'b00, state[3:0], activation_select, 5'b0} :
+                  btn_leds;
     
     // UART Interface
     uart_interface #(
@@ -412,10 +374,10 @@ module tpu_top_with_io_complete (
     assign spi_mem_sel = 2'b00;
     assign spi_tpu_start = 1'b0;
     
-    // Button interface - simple demo mode
+    // Button interface - simplified demo mode
     // btn_up = start computation
-    // btn_down = reset
-    // switches[7:0] = data input
+    // btn_down = load data
+    // switches[3:0] = address low nibble
     
     reg btn_up_r, btn_down_r;
     always @(posedge clk) begin
@@ -427,28 +389,12 @@ module tpu_top_with_io_complete (
     wire btn_down_pulse = btn_down && !btn_down_r;
     
     assign btn_tpu_start = btn_up_pulse;
-    assign btn_mem_addr = switches[7:0];
+    assign btn_mem_addr = {4'b0, switches[3:0]};  // Use only lower 4 bits for address
     assign btn_mem_din = {switches[7:0], switches[7:0]};  // Replicate for demo
     assign btn_mem_we = btn_down_pulse;
-    assign btn_mem_sel = switches[9:8];
+    assign btn_mem_sel = 2'b00;  // Default to matrix_a
     
-    // Button mode LED output
-    assign btn_leds = {tpu_done, tpu_busy, state[3:0], 4'b0, row_counter[3:0], 2'b0};
-    
-    // Simple 7-segment display showing state
-    reg [6:0] seg_pattern;
-    always @(*) begin
-        case (state)
-            IDLE:               seg_pattern = 7'b1000000;  // 0
-            COMPUTE:            seg_pattern = 7'b0110000;  // 3
-            APPLY_ACTIVATION:   seg_pattern = 7'b0011001;  // 4
-            STORE_RESULT:       seg_pattern = 7'b0010010;  // 5
-            DONE:               seg_pattern = 7'b0000010;  // 6
-            default:            seg_pattern = 7'b1111111;  // blank
-        endcase
-    end
-    
-    assign btn_seg = seg_pattern;
-    assign btn_an = 4'b1110;  // Display on rightmost digit
+    // Button mode LED output - show TPU status
+    assign btn_leds = {tpu_done, tpu_busy, state[3:0], row_counter[3:0], switches[5:0]};
 
 endmodule
