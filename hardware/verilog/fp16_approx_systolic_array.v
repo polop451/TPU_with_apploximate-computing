@@ -22,8 +22,15 @@ module fp16_approx_systolic_array #(
     input wire [15:0] w_in_0, w_in_1, w_in_2, w_in_3,
     input wire [15:0] w_in_4, w_in_5, w_in_6, w_in_7,
     
-    // FP16 Accumulated outputs (8x8 = 64 outputs)
-    output wire [15:0] acc_out [0:SIZE-1][0:SIZE-1]
+    // FP16 Accumulated outputs (8x8 = 64 individual outputs)
+    output wire [15:0] acc_out_00, acc_out_01, acc_out_02, acc_out_03, acc_out_04, acc_out_05, acc_out_06, acc_out_07,
+    output wire [15:0] acc_out_10, acc_out_11, acc_out_12, acc_out_13, acc_out_14, acc_out_15, acc_out_16, acc_out_17,
+    output wire [15:0] acc_out_20, acc_out_21, acc_out_22, acc_out_23, acc_out_24, acc_out_25, acc_out_26, acc_out_27,
+    output wire [15:0] acc_out_30, acc_out_31, acc_out_32, acc_out_33, acc_out_34, acc_out_35, acc_out_36, acc_out_37,
+    output wire [15:0] acc_out_40, acc_out_41, acc_out_42, acc_out_43, acc_out_44, acc_out_45, acc_out_46, acc_out_47,
+    output wire [15:0] acc_out_50, acc_out_51, acc_out_52, acc_out_53, acc_out_54, acc_out_55, acc_out_56, acc_out_57,
+    output wire [15:0] acc_out_60, acc_out_61, acc_out_62, acc_out_63, acc_out_64, acc_out_65, acc_out_66, acc_out_67,
+    output wire [15:0] acc_out_70, acc_out_71, acc_out_72, acc_out_73, acc_out_74, acc_out_75, acc_out_76, acc_out_77
 );
 
     // Internal interconnect wires for activation data flow (horizontal)
@@ -55,15 +62,86 @@ module fp16_approx_systolic_array #(
     assign w_wire[0][6] = w_in_6;
     assign w_wire[0][7] = w_in_7;
     
-    // Connect outputs
-    genvar i, j;
-    generate
-        for (i = 0; i < SIZE; i = i + 1) begin : gen_out_row
-            for (j = 0; j < SIZE; j = j + 1) begin : gen_out_col
-                assign acc_out[i][j] = acc_wire[i][j];
-            end
-        end
-    endgenerate
+    // Connect outputs to individual ports
+    // Row 0
+    assign acc_out_00 = acc_wire[0][0];
+    assign acc_out_01 = acc_wire[0][1];
+    assign acc_out_02 = acc_wire[0][2];
+    assign acc_out_03 = acc_wire[0][3];
+    assign acc_out_04 = acc_wire[0][4];
+    assign acc_out_05 = acc_wire[0][5];
+    assign acc_out_06 = acc_wire[0][6];
+    assign acc_out_07 = acc_wire[0][7];
+    
+    // Row 1
+    assign acc_out_10 = acc_wire[1][0];
+    assign acc_out_11 = acc_wire[1][1];
+    assign acc_out_12 = acc_wire[1][2];
+    assign acc_out_13 = acc_wire[1][3];
+    assign acc_out_14 = acc_wire[1][4];
+    assign acc_out_15 = acc_wire[1][5];
+    assign acc_out_16 = acc_wire[1][6];
+    assign acc_out_17 = acc_wire[1][7];
+    
+    // Row 2
+    assign acc_out_20 = acc_wire[2][0];
+    assign acc_out_21 = acc_wire[2][1];
+    assign acc_out_22 = acc_wire[2][2];
+    assign acc_out_23 = acc_wire[2][3];
+    assign acc_out_24 = acc_wire[2][4];
+    assign acc_out_25 = acc_wire[2][5];
+    assign acc_out_26 = acc_wire[2][6];
+    assign acc_out_27 = acc_wire[2][7];
+    
+    // Row 3
+    assign acc_out_30 = acc_wire[3][0];
+    assign acc_out_31 = acc_wire[3][1];
+    assign acc_out_32 = acc_wire[3][2];
+    assign acc_out_33 = acc_wire[3][3];
+    assign acc_out_34 = acc_wire[3][4];
+    assign acc_out_35 = acc_wire[3][5];
+    assign acc_out_36 = acc_wire[3][6];
+    assign acc_out_37 = acc_wire[3][7];
+    
+    // Row 4
+    assign acc_out_40 = acc_wire[4][0];
+    assign acc_out_41 = acc_wire[4][1];
+    assign acc_out_42 = acc_wire[4][2];
+    assign acc_out_43 = acc_wire[4][3];
+    assign acc_out_44 = acc_wire[4][4];
+    assign acc_out_45 = acc_wire[4][5];
+    assign acc_out_46 = acc_wire[4][6];
+    assign acc_out_47 = acc_wire[4][7];
+    
+    // Row 5
+    assign acc_out_50 = acc_wire[5][0];
+    assign acc_out_51 = acc_wire[5][1];
+    assign acc_out_52 = acc_wire[5][2];
+    assign acc_out_53 = acc_wire[5][3];
+    assign acc_out_54 = acc_wire[5][4];
+    assign acc_out_55 = acc_wire[5][5];
+    assign acc_out_56 = acc_wire[5][6];
+    assign acc_out_57 = acc_wire[5][7];
+    
+    // Row 6
+    assign acc_out_60 = acc_wire[6][0];
+    assign acc_out_61 = acc_wire[6][1];
+    assign acc_out_62 = acc_wire[6][2];
+    assign acc_out_63 = acc_wire[6][3];
+    assign acc_out_64 = acc_wire[6][4];
+    assign acc_out_65 = acc_wire[6][5];
+    assign acc_out_66 = acc_wire[6][6];
+    assign acc_out_67 = acc_wire[6][7];
+    
+    // Row 7
+    assign acc_out_70 = acc_wire[7][0];
+    assign acc_out_71 = acc_wire[7][1];
+    assign acc_out_72 = acc_wire[7][2];
+    assign acc_out_73 = acc_wire[7][3];
+    assign acc_out_74 = acc_wire[7][4];
+    assign acc_out_75 = acc_wire[7][5];
+    assign acc_out_76 = acc_wire[7][6];
+    assign acc_out_77 = acc_wire[7][7];
     
     // Generate 8x8 array of approximate MAC units
     genvar row, col;

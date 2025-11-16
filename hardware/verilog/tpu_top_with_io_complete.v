@@ -71,7 +71,16 @@ module tpu_top_with_io_complete (
     // Systolic array signals
     wire systolic_enable;
     wire systolic_start;
-    wire [15:0] systolic_results [0:7][0:7];  // 8x8 results from systolic array
+    
+    // 8x8 systolic array outputs (individual wires)
+    wire [15:0] acc_out_00, acc_out_01, acc_out_02, acc_out_03, acc_out_04, acc_out_05, acc_out_06, acc_out_07;
+    wire [15:0] acc_out_10, acc_out_11, acc_out_12, acc_out_13, acc_out_14, acc_out_15, acc_out_16, acc_out_17;
+    wire [15:0] acc_out_20, acc_out_21, acc_out_22, acc_out_23, acc_out_24, acc_out_25, acc_out_26, acc_out_27;
+    wire [15:0] acc_out_30, acc_out_31, acc_out_32, acc_out_33, acc_out_34, acc_out_35, acc_out_36, acc_out_37;
+    wire [15:0] acc_out_40, acc_out_41, acc_out_42, acc_out_43, acc_out_44, acc_out_45, acc_out_46, acc_out_47;
+    wire [15:0] acc_out_50, acc_out_51, acc_out_52, acc_out_53, acc_out_54, acc_out_55, acc_out_56, acc_out_57;
+    wire [15:0] acc_out_60, acc_out_61, acc_out_62, acc_out_63, acc_out_64, acc_out_65, acc_out_66, acc_out_67;
+    wire [15:0] acc_out_70, acc_out_71, acc_out_72, acc_out_73, acc_out_74, acc_out_75, acc_out_76, acc_out_77;
     
     // Interface signals
     // Button/Switch interface
@@ -202,11 +211,43 @@ module tpu_top_with_io_complete (
                 
                 STORE_RESULT: begin
                     // Store all 8x8 results to result memory
-                    // Flatten 2D array to 1D memory
-                    if (row_counter < 8) begin
-                        for (j = 0; j < 8; j = j + 1) begin
-                            result_mem[row_counter * 8 + j] <= systolic_results[row_counter][j];
+                    // Store row by row
+                    case (row_counter)
+                        4'd0: begin
+                            result_mem[0] <= acc_out_00; result_mem[1] <= acc_out_01; result_mem[2] <= acc_out_02; result_mem[3] <= acc_out_03;
+                            result_mem[4] <= acc_out_04; result_mem[5] <= acc_out_05; result_mem[6] <= acc_out_06; result_mem[7] <= acc_out_07;
                         end
+                        4'd1: begin
+                            result_mem[8] <= acc_out_10; result_mem[9] <= acc_out_11; result_mem[10] <= acc_out_12; result_mem[11] <= acc_out_13;
+                            result_mem[12] <= acc_out_14; result_mem[13] <= acc_out_15; result_mem[14] <= acc_out_16; result_mem[15] <= acc_out_17;
+                        end
+                        4'd2: begin
+                            result_mem[16] <= acc_out_20; result_mem[17] <= acc_out_21; result_mem[18] <= acc_out_22; result_mem[19] <= acc_out_23;
+                            result_mem[20] <= acc_out_24; result_mem[21] <= acc_out_25; result_mem[22] <= acc_out_26; result_mem[23] <= acc_out_27;
+                        end
+                        4'd3: begin
+                            result_mem[24] <= acc_out_30; result_mem[25] <= acc_out_31; result_mem[26] <= acc_out_32; result_mem[27] <= acc_out_33;
+                            result_mem[28] <= acc_out_34; result_mem[29] <= acc_out_35; result_mem[30] <= acc_out_36; result_mem[31] <= acc_out_37;
+                        end
+                        4'd4: begin
+                            result_mem[32] <= acc_out_40; result_mem[33] <= acc_out_41; result_mem[34] <= acc_out_42; result_mem[35] <= acc_out_43;
+                            result_mem[36] <= acc_out_44; result_mem[37] <= acc_out_45; result_mem[38] <= acc_out_46; result_mem[39] <= acc_out_47;
+                        end
+                        4'd5: begin
+                            result_mem[40] <= acc_out_50; result_mem[41] <= acc_out_51; result_mem[42] <= acc_out_52; result_mem[43] <= acc_out_53;
+                            result_mem[44] <= acc_out_54; result_mem[45] <= acc_out_55; result_mem[46] <= acc_out_56; result_mem[47] <= acc_out_57;
+                        end
+                        4'd6: begin
+                            result_mem[48] <= acc_out_60; result_mem[49] <= acc_out_61; result_mem[50] <= acc_out_62; result_mem[51] <= acc_out_63;
+                            result_mem[52] <= acc_out_64; result_mem[53] <= acc_out_65; result_mem[54] <= acc_out_66; result_mem[55] <= acc_out_67;
+                        end
+                        4'd7: begin
+                            result_mem[56] <= acc_out_70; result_mem[57] <= acc_out_71; result_mem[58] <= acc_out_72; result_mem[59] <= acc_out_73;
+                            result_mem[60] <= acc_out_74; result_mem[61] <= acc_out_75; result_mem[62] <= acc_out_76; result_mem[63] <= acc_out_77;
+                        end
+                    endcase
+                    
+                    if (row_counter < 8) begin
                         row_counter <= row_counter + 1;
                     end else begin
                         state <= DONE;
@@ -242,26 +283,41 @@ module tpu_top_with_io_complete (
         
         // Connect activations (row inputs) from Matrix A
         .a_in_0(matrix_a_mem[0]),
-        .a_in_1(matrix_a_mem[1]),
-        .a_in_2(matrix_a_mem[2]),
-        .a_in_3(matrix_a_mem[3]),
-        .a_in_4(matrix_a_mem[4]),
-        .a_in_5(matrix_a_mem[5]),
-        .a_in_6(matrix_a_mem[6]),
-        .a_in_7(matrix_a_mem[7]),
+        .a_in_1(matrix_a_mem[8]),   // Row 1 starts at index 8
+        .a_in_2(matrix_a_mem[16]),  // Row 2 starts at index 16
+        .a_in_3(matrix_a_mem[24]),  // Row 3 starts at index 24
+        .a_in_4(matrix_a_mem[32]),  // Row 4 starts at index 32
+        .a_in_5(matrix_a_mem[40]),  // Row 5 starts at index 40
+        .a_in_6(matrix_a_mem[48]),  // Row 6 starts at index 48
+        .a_in_7(matrix_a_mem[56]),  // Row 7 starts at index 56
         
         // Connect weights (column inputs) from Matrix B
-        .w_in_0(matrix_b_mem[0]),
-        .w_in_1(matrix_b_mem[1]),
-        .w_in_2(matrix_b_mem[2]),
-        .w_in_3(matrix_b_mem[3]),
-        .w_in_4(matrix_b_mem[4]),
-        .w_in_5(matrix_b_mem[5]),
-        .w_in_6(matrix_b_mem[6]),
-        .w_in_7(matrix_b_mem[7]),
+        .w_in_0(matrix_b_mem[0]),   // Col 0
+        .w_in_1(matrix_b_mem[1]),   // Col 1
+        .w_in_2(matrix_b_mem[2]),   // Col 2
+        .w_in_3(matrix_b_mem[3]),   // Col 3
+        .w_in_4(matrix_b_mem[4]),   // Col 4
+        .w_in_5(matrix_b_mem[5]),   // Col 5
+        .w_in_6(matrix_b_mem[6]),   // Col 6
+        .w_in_7(matrix_b_mem[7]),   // Col 7
         
-        // Connect outputs
-        .acc_out(systolic_results)
+        // Connect outputs (all 64 individual wires)
+        .acc_out_00(acc_out_00), .acc_out_01(acc_out_01), .acc_out_02(acc_out_02), .acc_out_03(acc_out_03),
+        .acc_out_04(acc_out_04), .acc_out_05(acc_out_05), .acc_out_06(acc_out_06), .acc_out_07(acc_out_07),
+        .acc_out_10(acc_out_10), .acc_out_11(acc_out_11), .acc_out_12(acc_out_12), .acc_out_13(acc_out_13),
+        .acc_out_14(acc_out_14), .acc_out_15(acc_out_15), .acc_out_16(acc_out_16), .acc_out_17(acc_out_17),
+        .acc_out_20(acc_out_20), .acc_out_21(acc_out_21), .acc_out_22(acc_out_22), .acc_out_23(acc_out_23),
+        .acc_out_24(acc_out_24), .acc_out_25(acc_out_25), .acc_out_26(acc_out_26), .acc_out_27(acc_out_27),
+        .acc_out_30(acc_out_30), .acc_out_31(acc_out_31), .acc_out_32(acc_out_32), .acc_out_33(acc_out_33),
+        .acc_out_34(acc_out_34), .acc_out_35(acc_out_35), .acc_out_36(acc_out_36), .acc_out_37(acc_out_37),
+        .acc_out_40(acc_out_40), .acc_out_41(acc_out_41), .acc_out_42(acc_out_42), .acc_out_43(acc_out_43),
+        .acc_out_44(acc_out_44), .acc_out_45(acc_out_45), .acc_out_46(acc_out_46), .acc_out_47(acc_out_47),
+        .acc_out_50(acc_out_50), .acc_out_51(acc_out_51), .acc_out_52(acc_out_52), .acc_out_53(acc_out_53),
+        .acc_out_54(acc_out_54), .acc_out_55(acc_out_55), .acc_out_56(acc_out_56), .acc_out_57(acc_out_57),
+        .acc_out_60(acc_out_60), .acc_out_61(acc_out_61), .acc_out_62(acc_out_62), .acc_out_63(acc_out_63),
+        .acc_out_64(acc_out_64), .acc_out_65(acc_out_65), .acc_out_66(acc_out_66), .acc_out_67(acc_out_67),
+        .acc_out_70(acc_out_70), .acc_out_71(acc_out_71), .acc_out_72(acc_out_72), .acc_out_73(acc_out_73),
+        .acc_out_74(acc_out_74), .acc_out_75(acc_out_75), .acc_out_76(acc_out_76), .acc_out_77(acc_out_77)
     );
     
     // Note: Activation functions can be added here if needed
