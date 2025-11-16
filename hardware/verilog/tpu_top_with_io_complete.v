@@ -121,19 +121,7 @@ module tpu_top_with_io_complete (
     // Result memory (8x8 = 64 FP16 values = 128 bytes)
     reg [15:0] result_mem [0:63];
     
-    // Memory read/write logic
-    always @(posedge clk) begin
-        if (!rst_n) begin
-            // Optional: Initialize memory to zero
-        end else if (mem_we) begin
-            case (mem_select)
-                2'b00: matrix_a_mem[mem_addr[5:0]] <= mem_data_in;
-                2'b01: matrix_b_mem[mem_addr[5:0]] <= mem_data_in;
-                2'b10: result_mem[mem_addr[5:0]] <= mem_data_in;
-                default: ;
-            endcase
-        end
-    end
+    // Note: Memory write logic is now integrated in FSM to avoid multiple drivers
     
     // Memory read logic
     reg [15:0] mem_read_data;
@@ -185,6 +173,16 @@ module tpu_top_with_io_complete (
         end else begin
             case (state)
                 IDLE: begin
+                    // Handle external memory writes in IDLE state
+                    if (mem_we) begin
+                        case (mem_select)
+                            2'b00: matrix_a_mem[mem_addr[5:0]] <= mem_data_in;
+                            2'b01: matrix_b_mem[mem_addr[5:0]] <= mem_data_in;
+                            2'b10: result_mem[mem_addr[5:0]] <= mem_data_in;
+                            default: ;
+                        endcase
+                    end
+                    
                     if (tpu_start && !computing) begin
                         state <= COMPUTE;
                         compute_counter <= 0;
@@ -256,6 +254,17 @@ module tpu_top_with_io_complete (
                 
                 DONE: begin
                     computing <= 1'b0;
+                    
+                    // Allow external memory writes in DONE state
+                    if (mem_we) begin
+                        case (mem_select)
+                            2'b00: matrix_a_mem[mem_addr[5:0]] <= mem_data_in;
+                            2'b01: matrix_b_mem[mem_addr[5:0]] <= mem_data_in;
+                            2'b10: result_mem[mem_addr[5:0]] <= mem_data_in;
+                            default: ;
+                        endcase
+                    end
+                    
                     // Wait a few cycles in DONE state before returning to IDLE
                     compute_counter <= compute_counter + 1;
                     if (compute_counter >= 10) begin
