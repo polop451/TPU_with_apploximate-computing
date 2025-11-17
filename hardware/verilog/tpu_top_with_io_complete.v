@@ -31,19 +31,11 @@ module tpu_top_with_io_complete (
 );
 
     // ========================================================================
-    // Interface Mode Selection
-    // ========================================================================
-    // Simplified: Only UART and Button modes
-    // switches[7] selects interface mode:
-    // 0 = Button/Switch mode (demo/debug)
-    // 1 = UART mode (primary interface)
-    
-    wire interface_mode = switches[7];
-    wire [2:0] activation_select = switches[6:4];  // Activation function select
-    
-    // ========================================================================
     // TPU Core Signals
     // ========================================================================
+    
+    // Interface mode: switches[7] = 0 (Button) or 1 (UART)
+    wire interface_mode = switches[7];
     
     // Memory interface
     wire [7:0] mem_addr;
@@ -81,15 +73,30 @@ module tpu_top_with_io_complete (
     wire btn_tpu_start;
     wire [15:0] btn_leds;
     
-    // UART interface  
+    // UART protocol handler interface
     wire [7:0] uart_mem_addr;
-    wire [7:0] uart_data_out;
-    wire uart_data_valid;
-    wire uart_start_out;
-    reg [15:0] uart_mem_din;
-    reg uart_mem_we;
-    reg [1:0] uart_mem_sel;
-    reg uart_tpu_start;
+    wire [15:0] uart_mem_dout;
+    wire uart_mem_we;
+    wire [1:0] uart_mem_sel;
+    wire uart_tpu_start;
+    wire uart_tpu_reset;
+    wire [7:0] uart_status_leds;
+    
+    // ========================================================================
+    // Interface Mode Selection and Multiplexing
+    // ========================================================================
+    
+    // Select active interface based on switches[7]
+    // 0 = Button mode (demo), 1 = UART mode (primary)
+    assign mem_addr = interface_mode ? uart_mem_addr : btn_mem_addr;
+    assign mem_data_in = interface_mode ? uart_mem_dout : btn_mem_din;
+    assign mem_we = interface_mode ? uart_mem_we : btn_mem_we;
+    assign mem_select = interface_mode ? uart_mem_sel : btn_mem_sel;
+    assign tpu_start = interface_mode ? uart_tpu_start : btn_tpu_start;
+    assign tpu_reset = interface_mode ? uart_tpu_reset : 1'b0;
+    
+    // LED output multiplexing
+    assign leds = interface_mode ? {uart_status_leds, 8'h00} : btn_leds;
     
     // ========================================================================
     // Memory Banks (Block RAM)
@@ -319,60 +326,50 @@ module tpu_top_with_io_complete (
     
     // Multiplex based on interface mode (simplified: button=0, uart=1)
     assign mem_addr = interface_mode ? uart_mem_addr : btn_mem_addr;
-    assign mem_data_in = interface_mode ? uart_mem_din : btn_mem_din;
+    assign mem_data_in = interface_mode ? uart_mem_dout : btn_mem_din;
     assign mem_we = interface_mode ? uart_mem_we : btn_mem_we;
     assign mem_select = interface_mode ? uart_mem_sel : btn_mem_sel;
     assign tpu_start = interface_mode ? uart_tpu_start : btn_tpu_start;
+    assign tpu_reset = interface_mode ? uart_tpu_reset : 1'b0;
     
-    // LED output - merge status into main LED array
-    assign leds = interface_mode ? 
-                  {tpu_done, tpu_busy, 2'b00, state[3:0], activation_select, 5'b0} :
-                  btn_leds;
+    // LED output multiplexing
+    assign leds = interface_mode ? {uart_status_leds, 8'h00} : btn_leds;
     
-    // UART Interface
-    uart_interface #(
+    // ========================================================================
+    // UART Protocol Handler
+    // ========================================================================
+    
+    uart_protocol_handler #(
         .CLK_FREQ(100_000_000),
         .BAUD_RATE(115200)
-    ) uart_if (
+    ) uart_protocol (
         .clk(clk),
         .rst_n(rst_n),
+        
+        // UART physical pins
         .uart_rx(uart_rx),
         .uart_tx(uart_tx),
         
-        // TPU interface
-        .tpu_data_out(uart_data_out),
-        .tpu_data_valid(uart_data_valid),
-        .tpu_addr(uart_mem_addr),
-        .tpu_write_enable(),  // Not used
-        .tpu_start(uart_start_out),
+        // Memory interface
+        .mem_addr(uart_mem_addr),
+        .mem_data_out(uart_mem_dout),
+        .mem_data_in(mem_data_out),
+        .mem_we(uart_mem_we),
+        .mem_select(uart_mem_sel),
         
-        .tpu_data_in(result_mem[0][7:0]),
+        // TPU control
+        .tpu_start(uart_tpu_start),
+        .tpu_reset(uart_tpu_reset),
         .tpu_busy(tpu_busy),
         .tpu_done(tpu_done),
         
-        .status_leds()  // Not used
+        // Status LEDs
+        .status_leds(uart_status_leds)
     );
     
-    // Convert UART outputs to memory interface signals
-    always @(posedge clk) begin
-        if (!rst_n) begin
-            uart_mem_din <= 16'h0000;
-            uart_mem_we <= 1'b0;
-            uart_mem_sel <= 2'b00;
-            uart_tpu_start <= 1'b0;
-        end else begin
-            uart_mem_din <= {8'h00, uart_data_out};
-            uart_mem_we <= uart_data_valid;
-            uart_mem_sel <= 2'b00;  // Default to matrix_a
-            uart_tpu_start <= uart_start_out;
-        end
-    end
-    
-    assign spi_mem_addr = 8'h00;
-    assign spi_mem_din = 16'h0000;
-    assign spi_mem_we = 1'b0;
-    assign spi_mem_sel = 2'b00;
-    assign spi_tpu_start = 1'b0;
+    // ========================================================================
+    // Button/Switch Interface (Demo Mode)
+    // ========================================================================
     
     // Button interface - simplified demo mode
     // btn_up = start computation
